@@ -6,50 +6,56 @@
 // Passed arguments: 
 // tokenIds - Array of target IDs, 
 // originatorId - Token Id, 
-// saveConfig - parameters, 
-// passConfig - parameters, 
-// failConfig - parameters, 
-// passEffect - parameters, 
-// failEffect - parameters
+// saveConfig - Parameters, 
+// passConfig - Parameters, 
+// failConfig - Parameters, 
+// passEffect - Parameters, 
+// failEffect - Parameters
 
 const originator = canvas.tokens.get(scope.originatorId)
+
+// Data handling check
+if (typeof originator.document.getFlag("world", "fails") !== "undefined") {
+    originator.document.unsetFlag("world", "fails");
+};
+
 const tokens = []
-scope.tokenIds.forEach(async(token) => {
-	await tokens.push(canvas.tokens.get(token))
-});
+for await (i of scope.tokenIds) {
+	await tokens.push(canvas.tokens.get(i))
+};
+
 const saveConfig = scope.saveConfig;
 const passConfig = scope.passConfig;
 const failConfig = scope.failConfig;
 const effect = game.macros.getName("Save Effect");
 
 var passEffect = scope.passEffect; // This may be empty if the effects are only something that can't be cleanly automated (e.g. pulling)
-if (passEffect === undefined) {
+if (typeof passEffect === undefined) {
 	passEffect = false
 };
 var failEffect = scope.failEffect; // This may be empty if the effects are only something that can't be cleanly automated (e.g. pulling)
-if (failEffect === undefined) {
+if (typeof failEffect === undefined) {
 	failEffect = false
 };
 
-const passes = []
-const fails = []
-
+let passes = [];
+let fails = [];
 for (i in tokens) {
 	let token = tokens[i];
 	const save = token.actor.system.save;
 	permList = []
 	// Create list of users with "OWNER" permissions to this token
-	for (i in game.users.contents) {
-		if (token.actor.testUserPermission(game.users.contents[i], "OWNER")) {
-			await permList.push(game.users.contents[i])
+	for await (j of game.users.contents) {
+		if (token.actor.testUserPermission(j, "OWNER")) {
+			await permList.push(j)
 		}
 	};
 
 	// If a player other than the GM has "OWNER" perms, let this resolve on their end
 	if (permList.length > 1) {
-		for (i in permList) {
-			if (permList[i].isGM) {
-				await permList.splice(i, 1);
+		for (j in permList) {
+			if (permList[j].isGM) {
+				await permList.splice(j, 1);
 			};
 		};
 	};
@@ -71,36 +77,21 @@ for (i in tokens) {
 			// Send fail message
 			const failFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, failConfig);
 			await failFlow.begin();
-			fails.push(token);
+			token.document.setFlag("world", "fail", true);
 		} else { // Success state
 			const passFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, passConfig);
 			await passFlow.begin();
-			passes.push(token)
+			token.document.setFlag("world", "pass", true);
 		};
 	} catch {
 		continue;
 	};
 };
 
-passIds = []
-passes.forEach(async(token) => {
-	passIds.push(token.document._id);
-	const miss = false;
-});
-
-failIds = []
-fails.forEach(async(token) => {
-	failIds.push(token.document._id);
-	const miss = true;
-});
-
 //Apply effects
-if (failEffect !== false) {
-	await effect.execute({
-		tokenId:originatorId,
-		failIds:failIds, 
-		passIds:passIds, 
-		failConfig:failEffect, 
-		passConfig:passEffect, 
-	});
-};
+await game.macros.getName("Save Effect").execute({
+	tokenId:originatorId,
+    targetIds:scope.tokenIds,
+	failConfig:failEffect, 
+	passConfig:passEffect, 
+});
