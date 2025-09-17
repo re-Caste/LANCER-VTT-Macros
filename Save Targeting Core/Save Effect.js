@@ -7,22 +7,21 @@
 // passConfig - Parameters, 
 // failConfig - Parameters, 
 
+const applyStatus = game.macros.getName("Apply Statuses")
 const token = canvas.tokens.get(scope.tokenId);
 if (typeof token.document.getFlag("world", "saveEffectCheck") !== "undefined") {
 	return;
 };
-await token.document.setFlag("world", "saveEffectCheck", true) // Only allow this to be open once
+await token.document.setFlag("world", "saveEffectCheck", true) // Only allow the Dialog to be open once
 
-const applyStatus = game.macros.getName("Apply Statuses")
-
-// Pass configs
+// Define pass configs
 const passStatuses = scope.passConfig[0];
 var passDmgConfig = scope.passConfig[1];
 if (passDmgConfig === undefined) {
 	var passDmgConfig = false;
 };
 
-// Fail configs
+// Define fail configs
 const failStatuses = scope.failConfig[0];
 var failDmgConfig = scope.failConfig[1];
 if (failDmgConfig === undefined) {
@@ -54,31 +53,33 @@ if (!permList.includes(game.user)) {
 // Wait for all saves to be complete
 await Dialog.wait({
 	title:"Confirm saves",
-    content:"Wait for all saves to be made before continuing.",
+    content:"Wait for all saves to be made before continuing.", // This needs changing to something more professional looking using html or avoiding a Dialog altogether
     buttons:{
         ok:{
             label:"OK",
             callback:async()=>{
-                // Create Id arrays from token flags creating in previous step
-                await canvas.tokens.selectObjects(token) // Ensure original token is selected
-                
                 let passIds = [];
                 let failIds = []
-                for await(i of scope.targetIds) {
+                for await(i of scope.targetIds) { // Populate Id Arrays and unset flags from appropriate tokens
                     let j = canvas.tokens.get(i)
-                    if (typeof j.document.getFlag("world", "pass") !== "undefined" && j.document.getFlag("world", "pass") === true){
+                    if (typeof j.document.getFlag("world", "pass") !== "undefined" && j.document.getFlag("world", "pass") === true) {
                         passIds.push(i);
                         j.document.unsetFlag("world", "pass");
                     };
-                    if (typeof j.document.getFlag("world", "fail") !== "undefined" && j.document.getFlag("world", "fail") === true){
+                    if (typeof j.document.getFlag("world", "fail") !== "undefined" && j.document.getFlag("world", "fail") === true) {
                         failIds.push(i);
                         j.document.unsetFlag("world", "fail");
                     }
                 };
+                await canvas.tokens.selectObjects(token) // Ensure original token is selected
+
+                // TO DO - Figure how to combine these into a singular damage roll
                 if (passIds.length > 0) {
                     await game.user.updateTokenTargets(passIds);
-                    const passFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, passDmgConfig);
-                    await passFlow.begin();
+                    if (passDmgConfig !== false) {
+                        const passFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, passDmgConfig);
+                        await passFlow.begin();
+                    };
                     if (passStatuses.length > 0) {
                         for await(i of passIds) {
                             applyStatus.execute({targetId:i, statuses:passStatuses})
@@ -88,8 +89,10 @@ await Dialog.wait({
 
                 if (failIds.length > 0) {
                     await game.user.updateTokenTargets(failIds);
-                    const failFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDmgConfig);
-                    await failFlow.begin();
+                    if (failDmgConfig !== false) {
+                        const failFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDmgConfig);
+                        await failFlow.begin();
+                    };
                     if (failStatuses.length > 0) {
                         for await(i of passIds) {
                             applyStatus.execute({targetId:i, statuses:failStatuses})
@@ -106,8 +109,9 @@ await Dialog.wait({
         }
     },
     close:async()=>{
+        // Clear Dialog-stopping flag when Dialog is closed
         await token.document.unsetFlag("world", "saveEffectCheck");
     }
 }, {top:100});
-
+// Clear token targets after Dialog is finished
 await game.user.updateTokenTargets();

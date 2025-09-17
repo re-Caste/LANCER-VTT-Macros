@@ -15,13 +15,13 @@
 const originator = canvas.tokens.get(scope.originatorId)
 
 // Data handling check
-if (typeof originator.document.getFlag("world", "fails") !== "undefined") {
-    originator.document.unsetFlag("world", "fails");
+if (typeof originator.document.getFlag("world", "saveEffectCheck") !== "undefined") {
+    originator.document.unsetFlag("world", "saveEffectCheck");
 };
 
 const tokens = []
 for await (i of scope.tokenIds) {
-	await tokens.push(canvas.tokens.get(i))
+	tokens.push(canvas.tokens.get(i))
 };
 
 const saveConfig = scope.saveConfig;
@@ -40,14 +40,13 @@ if (typeof failEffect === undefined) {
 
 let passes = [];
 let fails = [];
-for (i in tokens) {
-	let token = tokens[i];
+for await(token of tokens) {
 	const save = token.actor.system.save;
-	permList = []
+	let permList = []
 	// Create list of users with "OWNER" permissions to this token
 	for await (j of game.users.contents) {
 		if (token.actor.testUserPermission(j, "OWNER")) {
-			await permList.push(j)
+			permList.push(j)
 		}
 	};
 
@@ -55,7 +54,7 @@ for (i in tokens) {
 	if (permList.length > 1) {
 		for (j in permList) {
 			if (permList[j].isGM) {
-				await permList.splice(j, 1);
+				permList.splice(j, 1);
 			};
 		};
 	};
@@ -77,11 +76,11 @@ for (i in tokens) {
 			// Send fail message
 			const failFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, failConfig);
 			await failFlow.begin();
-			token.document.setFlag("world", "fail", true);
+			await token.document.setFlag("world", "fail", true);
 		} else { // Success state
 			const passFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, passConfig);
 			await passFlow.begin();
-			token.document.setFlag("world", "pass", true);
+			await token.document.setFlag("world", "pass", true);
 		};
 	} catch {
 		continue;
