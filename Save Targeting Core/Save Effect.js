@@ -19,7 +19,7 @@ await token.document.setFlag("world", "saveEffectCheck", true) // Only allow the
 
 // Define pass configs
 var passDamage = scope.passDamage;
-if (typeof passDamage === undefined) {
+if (typeof passDamage === "undefined") {
 	passDamage = false;
 };
 var passStatuses = scope.passStatuses;
@@ -29,7 +29,7 @@ if (typeof passStatuses === "undefined") {
 
 // Define fail configs
 var failDamage = scope.failDamage;
-if (typeof failDamage === undefined) {
+if (typeof failDamage === "undefined") {
 	failDamage = false;
 };
 var failStatuses = scope.failStatuses;
