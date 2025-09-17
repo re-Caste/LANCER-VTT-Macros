@@ -4,7 +4,6 @@ if (canvas.tokens.controlled.length !== 1) {
 };
 
 const token = canvas.tokens.controlled[0];
-const target = game.user.targets.first();
 const save = token.actor.system.save
 
 // Define arrays that we can map to lists as needed
@@ -38,37 +37,6 @@ await Dialog.wait({
             <hr>
             <div style="text-align:center">
                 <h3>
-                    Pass Configuration
-                </h3>
-            </div>
-            <div class="form-group">
-                Damage:&nbsp;
-                <select id="passDamageType" name="passDamageType">
-                    ${damageTypes.map(c=>`<option value="${c}">${c}</option>`)})
-                </select>
-                &nbsp; Value:&nbsp
-                <input id="passDamageVal" name="passDamageVal" type="text" value="1d6">
-            </div>
-            <div class="form-group">
-                <!-- I want this to be a dropdown with checkboxes, but this has to do for now -->
-                Status 1:&nbsp;
-                <select id="passStat1" name="passStat1" style="width:50%">
-                    <option value="none">None</option>
-                    ${CONFIG.statusEffects.map(d => `<option value="${d.id}">${game.i18n.localize(d.name)}</option>`)}
-                </select>
-                &nbsp; Status 2:&nbsp;
-                <select id="passStat2" name="passStat2" style="width:50%">
-                    <option value="none">None</option>
-                    ${CONFIG.statusEffects.map(e => `<option value="${e.id}">${game.i18n.localize(e.name)}</option>`)}
-                </select> 
-            </div>
-            <div class="form-group">
-                &nbsp; Other effects:&nbsp
-                <input id="passOtherEffects" name="passOtherEffects" type="text" value="" style:"width:100%">
-            </div>
-            <hr>
-            <div style="text-align:center">
-                <h3>
                     Fail Configuration
                 </h3>
             </div>
@@ -94,8 +62,47 @@ await Dialog.wait({
                 </select> 
             </div>
             <div class="form-group">
+                Overkill:&nbsp;
+                <input type="checkbox" id="overkill" name="overkill" value=true style="width:33%"> <!-- Overkill is here for completeness, but doesn't actually function as a bug(?) in lancer-vtt -->
+                Paracausal:&nbsp;
+                <input type="checkbox" id="paracausal" name="paracausal" value=true style="width:33%">
+                AP:&nbsp;
+                <input type="checkbox" id="ap" name="ap" value=true style="width:33%">
+            </div>
+            <div class="form-group">
                 &nbsp; Other effects:&nbsp
                 <input id="failOtherEffects" name="failOtherEffects" type="text" value="" style:"width:100%">
+            </div>
+            <hr>
+            <div style="text-align:center">
+                <h3>
+                    Pass Configuration
+                </h3>
+            </div>
+            <div class="form-group">
+                Damage:&nbsp;
+                <select id="passDamage" name="passDamage">
+                    <option value=false>Full Damage</option>
+                    <option value=true>Half Damage</option>
+                    <option value="none">No Damage</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <!-- I want this to be a dropdown with checkboxes, but this has to do for now -->
+                Status 1:&nbsp;
+                <select id="passStat1" name="passStat1" style="width:50%">
+                    <option value="none">None</option>
+                    ${CONFIG.statusEffects.map(d => `<option value="${d.id}">${game.i18n.localize(d.name)}</option>`)}
+                </select>
+                &nbsp; Status 2:&nbsp;
+                <select id="passStat2" name="passStat2" style="width:50%">
+                    <option value="none">None</option>
+                    ${CONFIG.statusEffects.map(e => `<option value="${e.id}">${game.i18n.localize(e.name)}</option>`)}
+                </select> 
+            </div>
+            <div class="form-group">
+                &nbsp; Other effects:&nbsp
+                <input id="passOtherEffects" name="passOtherEffects" type="text" value="" style:"width:100%">
             </div>
         </form>
         <hr>
@@ -109,17 +116,19 @@ await Dialog.wait({
                 let aoeLength = html.find('[name=aoeLength]')[0].value;
                 let saveType = html.find('[name=saveType]')[0].value;
 
-                let passDamageType = html.find('[name=passDamageType]')[0].value;
-                let passDamageVal = html.find('[name=passDamageVal]')[0].value;
-                let passStat1 = html.find('[name=passStat1]')[0].value;
-                let passStat2 = html.find('[name=passStat2]')[0].value;
-                let passOtherEffects = html.find('[name=passOtherEffects]')[0].value;
-
                 let failDamageType = html.find('[name=failDamageType]')[0].value;
                 let failDamageVal = html.find('[name=failDamageVal]')[0].value;
                 let failStat1 = html.find('[name=failStat1]')[0].value;
                 let failStat2 = html.find('[name=failStat2]')[0].value
                 let failOtherEffects = html.find('[name=failOtherEffects]')[0].value;
+                let overkill = html.find('[name=overkill]')[0].value;
+                let paracausal = html.find('[name=paracausal]')[0].value;
+                let ap = html.find('[name=ap]')[0].value;
+
+                let passDamage = html.find('[name=passDamage]')[0].value;
+                let passStat1 = html.find('[name=passStat1]')[0].value;
+                let passStat2 = html.find('[name=passStat2]')[0].value;
+                let passOtherEffects = html.find('[name=passOtherEffects]')[0].value;
 
                 // Call AoE Targeting Macro if needed
                 if (targeting !== "Single Target") {
@@ -132,7 +141,7 @@ await Dialog.wait({
                         }
                     );
                 };
-
+                
                 // Populate configs from collected values
                 const saveConfig = {
                     title: "Save :: "+saveType,
@@ -149,15 +158,24 @@ await Dialog.wait({
                     title: "Effect :: Fail",
                     description: failOtherEffects
                 };		
-
-                const dmgConfigPass = {
-                    title: "Pass Damage",
-                    damage: [{type: passDamageType, val:passDamageVal.toString()}]
+                
+                if (passDamage !== "none") {
+                    var dmgConfigPass = {
+                        title: "Pass Damage",
+                        damage: [{type: failDamageType, val:failDamageVal.toString()}],
+                        half_damage:(passDamage==="true"),
+                        overkill:(overkill==="true"),
+                        paracausal:(paracausal==="true"),
+                        ap:(ap==="true"),
+                    };
                 };
 
                 const dmgConfigFail = {
                     title: "Fail Damage",
                     damage: [{type: failDamageType, val:failDamageVal.toString()}],
+                    overkill:(overkill==="true"),
+                    paracausal:(paracausal==="true"),
+                    ap:(ap==="true"),
                 };
                 
                 const passStatuses = []
