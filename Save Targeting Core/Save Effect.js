@@ -4,8 +4,8 @@
 // Passed arguments:
 // originatorId - Token Id,
 // targetIds - Array of token Ids 
-// passConfig - Parameters, 
-// failConfig - Parameters, 
+// passConfig - Array in form [[status lids], dmgParams],
+// failConfig - Array in form [[status lids], dmgParams], 
 
 const applyStatus = game.macros.getName("Apply Statuses")
 const token = canvas.tokens.get(scope.tokenId);

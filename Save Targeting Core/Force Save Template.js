@@ -3,12 +3,21 @@ if (canvas.tokens.controlled.length !== 1) {
 	return ui.notifications.warn('Please select exactly 1 token.', {})
 };
 
-if (game.user.targets.length !== 1) {
-	return ui.notifications.warn('Please target exactly 1 token.', {})
-};
-
 const token = canvas.tokens.controlled[0];
-const target = game.user.targets.first();
+
+// Call AoE for targeting
+let wanted = "Line 10" // Change for whatever AoE is required OR set to "Single Target" to bypass AoE call
+if (wanted !== "Single Target") { 
+	wanted = wanted.split(" ") 
+	game.lancer.canvas.WeaponRangeTemplate.fromRange({
+		type: wanted[0],
+		val: wanted[1],
+	}).placeTemplate()
+		.then(t => {
+			if (t) game.lancer.targetsFromTemplate(t.id);
+		}
+	);
+};
 
 const saveConfig = {
 	title: "Save :: HULL",
@@ -27,10 +36,10 @@ const failConfig = {
 	description: "Fail Effect"
 };		
 
+// For a full list of damage config constructor parameters, see the LANCERVTT source page
 const dmgConfigPass = {
 	title: "Pass Damage",
-	damage: [{type: "Kinetic", val:damage.toString()}],
-    half_damage:true
+	damage: [{type: "Kinetic", val:damage.toString()}]
 };
 
 const dmgConfigFail = {
@@ -38,20 +47,27 @@ const dmgConfigFail = {
 	damage: [{type: "Kinetic", val:damage.toString()}],
 };
 
+// Wait for confirmation that targets are selected as desired via this Dialog
 await Dialog.wait({
-	title:"Confirm AoE Placement",
-	content:"Ensure selected targets are correct // Esc to cancel",
-	buttons:{
+    title:"Confirm Targets",
+    content:"Place AoE templates if requires, or select Single Target // Ensure selected targets are correct // Esc to cancel",
+    buttons:{
 		yes:{
 			label:"Confirm",
 			callback:async()=> {
+				const targets = Array.from(game.user.targets);
+				let targetIds = [];
+				for await(i of targets){
+					targetIds.push(i.document._id)
+				};
+
 				await game.macros.getName("Make Save").execute({
-					tokenIds:[target.document._id],
+					tokenIds:targetIds,
 					originatorId:token.document._id,
 					saveConfig:saveConfig,
 					passConfig: passConfig,
 					failConfig: failConfig,
-					passEffect: [[],dmgConfigPass],
+					passEffect: [[],dmgConfigPass], // If dmgConfigs aren't required in the macro you're making, remove them from these lines
 					failEffect: [[],dmgConfigFail]
 				});
 			}

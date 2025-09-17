@@ -1,16 +1,14 @@
 // Generic macro to allow for save targeting effects
 // Run as "Everyone" using Advanced Macros
 
-// effectConfig parameters are in the form [[statuses], {damagecard}]
-
 // Passed arguments: 
 // tokenIds - Array of target IDs, 
 // originatorId - Token Id, 
-// saveConfig - Parameters, 
-// passConfig - Parameters, 
-// failConfig - Parameters, 
-// passEffect - Parameters, 
-// failEffect - Parameters
+// saveConfig - statFlowParams, 
+// passEffect - simpleTextParams, 
+// failEffect - simpleTextParams, 
+// passConfig - Array in form [[status lids], dmgParams], 
+// failConfig - Array in form [[status lids], dmgParams],
 
 const originator = canvas.tokens.get(scope.originatorId)
 
@@ -66,21 +64,18 @@ for await(token of tokens) {
 
 	//Initialise flow
 	try {
-		const rollFlow = new(game.lancer.flows.get("StatRollFlow"))(token.actor, saveConfig);
+		await canvas.tokens.selectObjects(originator) // Ensure original token is selected
+		const rollFlow = new(game.lancer.flows.get("StatRollFlow"))(token.actor, saveConfig); // Force save flow
 		await rollFlow.begin();
-
-		// Get last rolled dice
-		const rolled = game.messages?.contents[game.messages?.contents.length - 1].rolls[0]._total;
-		canvas.tokens.controlled[0] = token; //force select their own token to ensure chat messages display properly
-		if (rolled < save) { // Fail state
-			// Send fail message
-			const failFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, failConfig);
+		const rolled = game.messages?.contents[game.messages?.contents.length - 1].rolls[0]._total; // Get roll from save flow
+		if (rolled < save) {
+			const failFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, failConfig); // Run the effect card
 			await failFlow.begin();
-			await token.document.setFlag("world", "fail", true);
-		} else { // Success state
-			const passFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, passConfig);
+			await token.document.setFlag("world", "fail", true); // Set flag on target denoting fail state
+		} else {
+			const passFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, passConfig); // Run the effect card
 			await passFlow.begin();
-			await token.document.setFlag("world", "pass", true);
+			await token.document.setFlag("world", "pass", true); // Set flag on target denoting pass state
 		};
 	} catch {
 		continue;

@@ -8,7 +8,7 @@ const target = game.user.targets.first();
 const save = token.actor.system.save
 
 // Define arrays that we can map to lists as needed
-let aoeCompendium = game.packs.get("lancer.core_macros").index.filter(i=>/\d/.test(i.name)).sort((a,b)=>a.name.localeCompare(b.name))
+let aoeTypes = ["Blast", "Burst", "Cone", "Line"]
 let saveTypes = ["HULL","AGI","SYS","ENG"]
 let damageTypes = ["Kinetic", "Energy", "Explosive", "Burn", "Heat", "Variable"]
 
@@ -26,8 +26,10 @@ await Dialog.wait({
                 Target:&nbsp;
                 <select id="targeting" name="targeting">
                     <option value="Single Target">Single Target</option>
-                    ${aoeCompendium.map(a=>`<option value="${a.name}">${a.name}</option>`)})
+                    ${aoeTypes.map(a=>`<option value="${a}">${a}</option>`)})
                 </select>
+                &nbsp;
+                <input id="aoeLength" name="aoeLength" type="text" value="">
                 &nbsp; Save type:&nbsp
                 <select id="saveType" name="saveType">
                     ${saveTypes.map(b=>`<option value="${b}">${b}</option>`)})
@@ -104,12 +106,15 @@ await Dialog.wait({
             callback:async(html)=>{
                 // Set all collected values from Dialog
                 let targeting = html.find('[name=targeting]')[0].value;
+                let aoeLength = html.find('[name=aoeLength]')[0].value;
                 let saveType = html.find('[name=saveType]')[0].value;
+
                 let passDamageType = html.find('[name=passDamageType]')[0].value;
                 let passDamageVal = html.find('[name=passDamageVal]')[0].value;
                 let passStat1 = html.find('[name=passStat1]')[0].value;
                 let passStat2 = html.find('[name=passStat2]')[0].value;
                 let passOtherEffects = html.find('[name=passOtherEffects]')[0].value;
+
                 let failDamageType = html.find('[name=failDamageType]')[0].value;
                 let failDamageVal = html.find('[name=failDamageVal]')[0].value;
                 let failStat1 = html.find('[name=failStat1]')[0].value;
@@ -118,8 +123,14 @@ await Dialog.wait({
 
                 // Call AoE Targeting Macro if needed
                 if (targeting !== "Single Target") {
-                    let compendium = game.packs.get("lancer.core_macros")
-                    await compendium.getDocument(compendium.index.find(i=>i.name===targeting)._id).then(j=>j.execute());
+                    game.lancer.canvas.WeaponRangeTemplate.fromRange({
+                        type: targeting,
+                        val: aoeLength,
+                    }).placeTemplate()
+                        .then(t => {
+                            if (t) game.lancer.targetsFromTemplate(t.id);
+                        }
+                    );
                 };
 
                 // Populate configs from collected values
@@ -152,18 +163,20 @@ await Dialog.wait({
                 const passStatuses = []
                 for await(i of [passStat1, passStat2])
                 if (i !== "none") {
-                    passStatuses.push(i)
+                    console.log(i);
+                    passStatuses.push(i);
                 };
 
                 const failStatuses = []
                 for await(i of [failStat1, failStat2])
                 if (i !== "none") {
-                    failStatuses.push(i)
+                    console.log(i);
+                    failStatuses.push(i);
                 };
 
                 await Dialog.wait({
-                    title:"Confirm AoE Placement",
-                    content:"Ensure selected targets are correct // Esc to cancel",
+                    title:"Confirm Targets",
+                    content:"Place AoE templates if requires, or select Single Target // Ensure selected targets are correct // Esc to cancel",
                     buttons:{
                         yes:{
                             label:"Confirm",
@@ -188,8 +201,10 @@ await Dialog.wait({
                         }
                     },
                     close:async()=>{
-                        // Clean up template from canvas
-                        canvas.templates.placeables.reverse()[0].document.delete()
+                        if (targeting !== "Single Target") {
+                            // Clean up template from canvas
+                            canvas.templates.placeables.reverse()[0].document.delete()
+                        };
                     }
                 }, {top:100});
             }
