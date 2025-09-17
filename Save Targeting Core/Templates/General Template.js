@@ -16,8 +16,8 @@ function tokenDistance(t1, t2) {
 
 // Call AoE for targeting
 let wanted = "Line 10"; // Change for whatever AoE is required OR set to "Single Target" to bypass AoE call
-wanted = wanted.split(" ");
-if (wanted[0] !== "Single") { // No need to edit this, this calls a Lancer Targeting Template 
+if (wanted !== "Single Target") { // Calls AoE template and sets targets from it, as in the built-in targeting macros
+	wanted = wanted.split(" ");
 	game.lancer.canvas.WeaponRangeTemplate.fromRange({
 		type: wanted[0],
 		val: wanted[1],
@@ -51,7 +51,7 @@ const passDamage = {
 	title: "Pass Damage",
 	damage: [{type: "Kinetic", val:damage.toString()}],
 	ap:false,
-	half_damage:false,
+	half_damage:true,
 	paracausal:false, // lancer-vtt's shorthand for "Cannot be reduced"
 };
 
@@ -63,7 +63,7 @@ const failDamage = {
 	paracausal:false, // lancer-vtt's shorthand for "Cannot be reduced"
 };
 
-switch (wanted[0]) { // Defines a variable to fill a 
+switch (wanted[0]) { // Defines a variable to display later
 	case "Single Target":
 		var content = "Target desired token";
 		break;
@@ -88,25 +88,20 @@ await Dialog.wait({
 	`,
     buttons:{
 		yes:{
-			label:"Confirm",
+			label:"OK",
 			callback:async()=> {
 				if (targeting === "Burst") { // Burst saves aren't typically found in 1st party material, but may be used in place of forcing all adjacent character to save
-					let tempTargets = [];
+					let targets = [];
 					let initTarget = game.user.targets.first()
 					for await(i of canvas.tokens.placeables) {
-						console.log(Number(aoeLength)+0.1);
 						if (tokenDistance(initTarget, i) < Number(aoeLength)+0.1 && initTarget !== i) { // Ignore originator of burst
-							tempTargets.push(i.document._id)
+							targets.push(i.document._id)
 						};
 					};
-					game.user.updateTokenTargets(tempTargets) // Set targets to all needed for burst
+					game.user.updateTokenTargets(targets) // Set targets to all needed for burst
 				};
 
-				const targets = Array.from(game.user.targets); // Creates an array of token IDs based on the tokens the user has targeted
-				let targetIds = [];
-				for await(i of targets){
-					targetIds.push(i.document._id)
-				};
+				const targetIds = Array.from(game.user.targets.ids); // Creates an array of token IDs based on the tokens the user has targeted
 
 				await game.macros.getName("Make Save").execute({
 					tokenIds:targetIds, 
@@ -120,10 +115,16 @@ await Dialog.wait({
 					failStatuses: [],
 				});
 			}
+		},
+		no:{
+			label:"Cancel",
+			callback:{}
 		}
 	},
 	close:async()=>{
-		// Clean up template from canvas
-		canvas.templates.placeables.reverse()[0].document.delete()
+		if (targeting !== "Single Target") {
+			// Clean up template from canvas
+			canvas.templates.placeables.reverse()[0].document.delete()
+		};
 	}
 }, {top:100});

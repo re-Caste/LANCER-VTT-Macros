@@ -232,22 +232,17 @@ await Dialog.wait({
                             label:"Confirm",
                             callback:async()=> {
                                 if (targeting === "Burst") { // Burst saves aren't typically found in 1st party material, but may be used in place of forcing all adjacent character to save
-                                    let tempTargets = [];
+                                    let targets = [];
                                     let initTarget = game.user.targets.first()
                                     for await(i of canvas.tokens.placeables) {
-                                        console.log(Number(aoeLength)+0.1);
                                         if (tokenDistance(initTarget, i) < Number(aoeLength)+0.1 && initTarget !== i) { // Ignore originator of burst
-                                            tempTargets.push(i.document._id)
+                                            targets.push(i.document._id)
                                         };
                                     };
-                                    game.user.updateTokenTargets(tempTargets) // Set targets to all needed for burst
+                                    game.user.updateTokenTargets(targets) // Set targets to all needed for burst
                                 };
 
-                                const targets = Array.from(game.user.targets);
-                                let targetIds = [];
-                                for await(i of targets){
-                                    targetIds.push(i.document._id)
-                                };
+                                const targetIds = Array.from(game.user.targets.ids);
 
                                 await game.macros.getName("Make Save").execute({
                                     tokenIds: targetIds,
@@ -266,8 +261,8 @@ await Dialog.wait({
                         }
                     },
                     close:async()=>{
-                        if (targeting !== "Single Target") {
-                            // Clean up template from canvas
+                        if (!["Single Target", "Burst"].includes(targeting)) {
+                            // Clean up template from canvas, if one exists
                             canvas.templates.placeables.reverse()[0].document.delete()
                         };
                     }
