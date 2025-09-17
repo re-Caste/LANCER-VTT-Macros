@@ -1,11 +1,14 @@
 // Generic macro to allow for save targeting effects
+// Ensure macro is named "Save Effect"
 // Run as "Everyone" using Advanced Macros
 
 // Passed arguments:
 // originatorId - Token Id,
 // targetIds - Array of token Ids 
-// passConfig - Array in form [[status lids], dmgParams],
-// failConfig - Array in form [[status lids], dmgParams], 
+// passDamage - damageFlowParams, 
+// failDamage - damageFlowParams,
+// passStatuses - Array of statcond lids
+// failStatuses - Array of statcond lids
 
 const applyStatus = game.macros.getName("Apply Statuses")
 const token = canvas.tokens.get(scope.tokenId);

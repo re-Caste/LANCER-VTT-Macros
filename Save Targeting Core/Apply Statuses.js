@@ -1,4 +1,5 @@
 // Used for apply statuses to enemies as a player
+// Ensure macro is named "Apply Statuses"
 // Run as "Game Master" using Advanced Macros
 
 // Passed parameters: 
