@@ -95,9 +95,9 @@ await game.macros.getName("Save Effect").execute({
 	tokenId:originatorId,
     targetIds:scope.tokenIds, 
 
-	passDamage:scope.passDamage, 
-	passStatuses:scope.passStatuses,
+	passDamage:passDamage, 
+	passStatuses:passStatuses,
 
-	failDamage:scope.failDamage,
-	failStatuses:scope.failStatuses,
+	failDamage:failDamage,
+	failStatuses:failStatuses,
 });
