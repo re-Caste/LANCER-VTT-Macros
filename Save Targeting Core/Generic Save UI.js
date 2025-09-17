@@ -11,6 +11,15 @@ let aoeTypes = ["Blast", "Burst", "Cone", "Line"]
 let saveTypes = ["HULL","AGI","SYS","ENG"]
 let damageTypes = ["Kinetic", "Energy", "Explosive", "Burn", "Heat", "Variable"]
 
+// Token Distance function for use on burst AoE as it scales with token size (lifted from LancerQoL's Engaged automation)
+// Everyone say "Thank you, CSMcFarland"
+function tokenDistance(t1, t2) {
+    const spaces1 = t1.getOccupiedSpaces();
+    const spaces2 = t2.getOccupiedSpaces();
+    const rays = spaces1.flatMap(s => spaces2.map(t => ({ ray: new Ray(s, t) })));
+    return (Math.min(...game.canvas.grid.measureDistances(rays, { gridSpaces: true })));
+};
+
 // Create the main UI
 await Dialog.wait({
     title:"Force saves",
@@ -34,6 +43,7 @@ await Dialog.wait({
                     ${saveTypes.map(b=>`<option value="${b}">${b}</option>`)})
                 </select>
             </div>
+
             <hr>
             <div style="text-align:center">
                 <h3>
@@ -60,20 +70,23 @@ await Dialog.wait({
                     <option value="none">None</option>
                     ${CONFIG.statusEffects.map(h => `<option value="${h.id}">${game.i18n.localize(h.name)}</option>`)}
                 </select> 
-            </div>
+            </div> 
+            <!-- Leaving these out for now as they seem to always be active :/
             <div class="form-group">
-                Overkill:&nbsp;
-                <input type="checkbox" id="overkill" name="overkill" value=true style="width:33%"> <!-- Overkill is here for completeness, but doesn't actually function as a bug(?) in lancer-vtt -->
-                Paracausal:&nbsp;
-                <input type="checkbox" id="paracausal" name="paracausal" value=true style="width:33%">
-                AP:&nbsp;
-                <input type="checkbox" id="ap" name="ap" value=true style="width:33%">
-            </div>
+                <input type="checkbox" id="overkill" name="overkill" value="true">
+                <label for="overkill" style="width:30%">Overkill</label>
+                <input type="checkbox" id="paracausal" name="paracausal" value="true">
+                <label for="paracausal" style="width:30%">Paracausal</label>
+                <input type="checkbox" id="ap" name="ap" value="true">
+                <label for="ap" style="width:30%">AP</label>
+            </div> 
+            -->
             <div class="form-group">
                 &nbsp; Other effects:&nbsp
                 <input id="failOtherEffects" name="failOtherEffects" type="text" value="" style:"width:100%">
             </div>
             <hr>
+
             <div style="text-align:center">
                 <h3>
                     Pass Configuration
@@ -121,25 +134,27 @@ await Dialog.wait({
                 let failStat1 = html.find('[name=failStat1]')[0].value;
                 let failStat2 = html.find('[name=failStat2]')[0].value
                 let failOtherEffects = html.find('[name=failOtherEffects]')[0].value;
-                let overkill = html.find('[name=overkill]')[0].value;
-                let paracausal = html.find('[name=paracausal]')[0].value;
-                let ap = html.find('[name=ap]')[0].value;
+//                let overkill = html.find('[name=overkill]')[0].value;
+//                let paracausal = html.find('[name=paracausal]')[0].value;
+//                let ap = html.find('[name=ap]')[0].value;
 
-                let passDamage = html.find('[name=passDamage]')[0].value;
+                let passDamageMult = html.find('[name=passDamage]')[0].value;
                 let passStat1 = html.find('[name=passStat1]')[0].value;
                 let passStat2 = html.find('[name=passStat2]')[0].value;
                 let passOtherEffects = html.find('[name=passOtherEffects]')[0].value;
 
                 // Call AoE Targeting Macro if needed
                 if (targeting !== "Single Target") {
-                    game.lancer.canvas.WeaponRangeTemplate.fromRange({
-                        type: targeting,
-                        val: aoeLength,
-                    }).placeTemplate()
-                        .then(t => {
-                            if (t) game.lancer.targetsFromTemplate(t.id);
-                        }
-                    );
+                    if (targeting !== "Burst") {
+                        game.lancer.canvas.WeaponRangeTemplate.fromRange({
+                            type: targeting,
+                            val: aoeLength,
+                        }).placeTemplate()
+                            .then(t => {
+                                if (t) game.lancer.targetsFromTemplate(t.id);
+                            }
+                        );
+                    }
                 };
                 
                 // Populate configs from collected values
@@ -149,71 +164,103 @@ await Dialog.wait({
                     total: token.actor.system.save,
                 };
 
-                const passConfig = {
+                const passCard = {
                     title: "Effect :: Pass",
                     description: passOtherEffects
                 };
 
-                const failConfig = {
+                const failCard = {
                     title: "Effect :: Fail",
                     description: failOtherEffects
                 };		
                 
-                if (passDamage !== "none") {
-                    var dmgConfigPass = {
+                if (passDamageMult !== "none") {
+                    var passDamage = {
                         title: "Pass Damage",
                         damage: [{type: failDamageType, val:failDamageVal.toString()}],
-                        half_damage:(passDamage==="true"),
-                        overkill:(overkill==="true"),
-                        paracausal:(paracausal==="true"),
-                        ap:(ap==="true"),
+                        half_damage:(passDamageMult==="true"),
+//                        overkill:(overkill==="true"),
+//                        paracausal:(paracausal==="true"),
+//                        ap:(ap==="true"),
                     };
                 };
 
-                const dmgConfigFail = {
+                const failDamage = {
                     title: "Fail Damage",
                     damage: [{type: failDamageType, val:failDamageVal.toString()}],
-                    overkill:(overkill==="true"),
-                    paracausal:(paracausal==="true"),
-                    ap:(ap==="true"),
+//                    overkill:(overkill==="true"),
+//                    paracausal:(paracausal==="true"),
+//                    ap:(ap==="true"),
                 };
                 
                 const passStatuses = []
                 for await(i of [passStat1, passStat2])
                 if (i !== "none") {
-                    console.log(i);
                     passStatuses.push(i);
                 };
 
                 const failStatuses = []
                 for await(i of [failStat1, failStat2])
                 if (i !== "none") {
-                    console.log(i);
                     failStatuses.push(i);
                 };
 
+                switch (targeting) {
+                    case "Single Target":
+                        var content = "Target desired token";
+                        break;
+                    case "Burst":
+                        var content = "Target token for centre of burst"
+                        break;
+                    default:
+                        var content = "Place AoE template"
+                        break;
+                }
+
                 await Dialog.wait({
                     title:"Confirm Targets",
-                    content:"Place AoE templates if requires, or select Single Target // Ensure selected targets are correct // Esc to cancel",
+                    content:`
+                            <form>
+                                <div style="text-align:center"">
+                                    // ${content} //<br>// Ensure selected targets are correct //<br>// Esc to cancel //
+                                </div>
+                                <hr>
+                            </form>
+                        `,
                     buttons:{
                         yes:{
                             label:"Confirm",
                             callback:async()=> {
-                                const targets = Array.from(game.user.targets);
+                                if (targeting === "Burst") { // Burst saves aren't typically found in 1st party material, but may be used in place of forcing all adjacent character to save
+                                    let tempTargets = [];
+                                    let initTarget = game.user.targets.first()
+                                    for await(i of canvas.tokens.placeables) {
+                                        console.log(Number(aoeLength)+0.1);
+                                        if (tokenDistance(initTarget, i) < Number(aoeLength)+0.1 && initTarget !== i) { // Ignore originator of burst
+                                            tempTargets.push(i.document._id)
+                                        };
+                                    };
+                                    game.user.updateTokenTargets(tempTargets) // Set targets to all needed for burst
+                                };
 
+                                const targets = Array.from(game.user.targets);
                                 let targetIds = [];
                                 for await(i of targets){
                                     targetIds.push(i.document._id)
                                 };
 
                                 await game.macros.getName("Make Save").execute({
-                                    tokenIds:targetIds,
-                                    originatorId:token.document._id,
-                                    saveConfig:saveConfig,
-                                    passConfig: passConfig,
-                                    failConfig: failConfig,
-                                    passEffect: [passStatuses,dmgConfigPass],
-                                    failEffect: [failStatuses,dmgConfigFail]
+                                    tokenIds: targetIds,
+                                    originatorId: token.document._id,
+                                    saveConfig: saveConfig,
+
+                                    passCard: passCard,
+                                    passDamage: passDamage,
+                                    passStatuses: passStatuses,
+
+                                    failCard: failCard,
+                                    failDamage: failDamage,
+                                    failStatuses: failStatuses,
                                 });
                             }
                         }

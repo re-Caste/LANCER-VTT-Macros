@@ -23,18 +23,13 @@ for await (i of scope.tokenIds) {
 };
 
 const saveConfig = scope.saveConfig;
-const passConfig = scope.passConfig;
-const failConfig = scope.failConfig;
-const effect = game.macros.getName("Save Effect");
+const passCard = scope.passCard;
+const failCard = scope.failCard;
 
-var passEffect = scope.passEffect; // This may be empty if the effects are only something that can't be cleanly automated (e.g. pulling)
-if (typeof passEffect === undefined) {
-	passEffect = false
-};
-var failEffect = scope.failEffect; // This may be empty if the effects are only something that can't be cleanly automated (e.g. pulling)
-if (typeof failEffect === undefined) {
-	failEffect = false
-};
+const passDamage = scope.passDamage;
+const passStatuses = scope.passStatuses;
+const failDamage = scope.failDamage;
+const failStatuses = scope.failStatuses;
 
 let passes = [];
 let fails = [];
@@ -69,11 +64,11 @@ for await(token of tokens) {
 		await rollFlow.begin();
 		const rolled = game.messages?.contents[game.messages?.contents.length - 1].rolls[0]._total; // Get roll from save flow
 		if (rolled < save) {
-			const failFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, failConfig); // Run the effect card
+			const failFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, failCard); // Run the effect card
 			await failFlow.begin();
 			await token.document.setFlag("world", "fail", true); // Set flag on target denoting fail state
 		} else {
-			const passFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, passConfig); // Run the effect card
+			const passFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, passCard); // Run the effect card
 			await passFlow.begin();
 			await token.document.setFlag("world", "pass", true); // Set flag on target denoting pass state
 		};
@@ -85,7 +80,11 @@ for await(token of tokens) {
 //Apply effects
 await game.macros.getName("Save Effect").execute({
 	tokenId:originatorId,
-    targetIds:scope.tokenIds,
-	failConfig:failEffect, 
-	passConfig:passEffect, 
+    targetIds:scope.tokenIds, 
+
+	passDamage:scope.passDamage, 
+	passStatuses:scope.passStatuses,
+
+	failDamage:scope.failDamage,
+	failStatuses:scope.failStatuses,
 });

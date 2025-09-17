@@ -5,10 +5,19 @@ if (canvas.tokens.controlled.length !== 1) {
 
 const token = canvas.tokens.controlled[0];
 
+// Token Distance function for use on burst AoE as it scales with token size (lifted from LancerQoL's Engaged automation)
+// Everyone say "Thank you, CSMcFarland"
+function tokenDistance(t1, t2) {
+    const spaces1 = t1.getOccupiedSpaces();
+    const spaces2 = t2.getOccupiedSpaces();
+    const rays = spaces1.flatMap(s => spaces2.map(t => ({ ray: new Ray(s, t) })));
+    return (Math.min(...game.canvas.grid.measureDistances(rays, { gridSpaces: true })));
+};
+
 // Call AoE for targeting
-let wanted = "Line 10" // Change for whatever AoE is required OR set to "Single Target" to bypass AoE call
-if (wanted !== "Single Target") { 
-	wanted = wanted.split(" ") 
+let wanted = "Line 10"; // Change for whatever AoE is required OR set to "Single Target" to bypass AoE call
+wanted = wanted.split(" ");
+if (wanted[0] !== "Single") { // No need to edit this, this calls a Lancer Targeting Template 
 	game.lancer.canvas.WeaponRangeTemplate.fromRange({
 		type: wanted[0],
 		val: wanted[1],
@@ -20,55 +29,95 @@ if (wanted !== "Single Target") {
 };
 
 const saveConfig = {
-	title: "Save :: HULL",
-	path: "system.___", // Replace blank area here with one of: hull / agi / sys / eng
+	title: "Save :: HULL", // Match "HULL" to whichever HASE you're using
+	path: "system.hull", // Replace "hull" here with one of: hull / agi / sys / eng as needed
 	total: token.actor.system.save, // Automatically populates the save target with the using character's save target
 };
 
 let damage = "1d6" // Change as needed
-const passConfig = {
+const passCard = {
 	title: "Effect :: Pass",
-	description: "Pass Effect"
+	description: "Pass Effect" // Fill with extraneous effects that the save does on a pass (e.g. knockback)
 };
 
-const failConfig = {
+const failCard = {
 	title: "Effect :: Fail",
-	description: "Fail Effect"
+	description: "Fail Effect" // Fill with extraneous effects that the save does on a fail (e.g. knockback)
 };		
 
-// For a full list of damage config constructor parameters, see the LANCERVTT source page
-const dmgConfigPass = {
+// Fill damage configs as required, some functional tags have been left here
+// Damage types: ["Kinetic", "Energy", "Explosive", "Burn", "Variable", "Heat"]
+const passDamage = {
 	title: "Pass Damage",
-	damage: [{type: "Kinetic", val:damage.toString()}]
+	damage: [{type: "Kinetic", val:damage.toString()}],
+	ap:false,
+	half_damage:false,
+	paracausal:false, // lancer-vtt's shorthand for "Cannot be reduced"
 };
 
-const dmgConfigFail = {
+const failDamage = {
 	title: "Fail Damage",
-	damage: [{type: "Kinetic", val:damage.toString()}],
+	damage: [{type: "Kinetic", val:damage.toString()}], // For learning purposes, val here only takes String arguments, so if damage is defined by a calculation, make sure you call .toString() on it when passing it in
+	ap:false,
+	half_damage:false,
+	paracausal:false, // lancer-vtt's shorthand for "Cannot be reduced"
 };
+
+switch (wanted[0]) { // Defines a variable to fill a 
+	case "Single Target":
+		var content = "Target desired token";
+		break;
+	case "Burst":
+		var content = "Target token for centre of burst"
+		break;
+	default:
+		var content = "Place AoE template"
+		break;
+}
 
 // Wait for confirmation that targets are selected as desired via this Dialog
 await Dialog.wait({
     title:"Confirm Targets",
-    content:"Place AoE templates if requires, or select Single Target // Ensure selected targets are correct // Esc to cancel",
+    content:`
+		<form>
+			<div style="text-align:center"">
+				// ${content} //<br>// Ensure selected targets are correct //<br>// Esc to cancel //
+			</div>
+			<hr>
+		</form>
+	`,
     buttons:{
 		yes:{
 			label:"Confirm",
 			callback:async()=> {
-				const targets = Array.from(game.user.targets);
+				if (targeting === "Burst") { // Burst saves aren't typically found in 1st party material, but may be used in place of forcing all adjacent character to save
+					let tempTargets = [];
+					let initTarget = game.user.targets.first()
+					for await(i of canvas.tokens.placeables) {
+						console.log(Number(aoeLength)+0.1);
+						if (tokenDistance(initTarget, i) < Number(aoeLength)+0.1 && initTarget !== i) { // Ignore originator of burst
+							tempTargets.push(i.document._id)
+						};
+					};
+					game.user.updateTokenTargets(tempTargets) // Set targets to all needed for burst
+				};
+
+				const targets = Array.from(game.user.targets); // Creates an array of token IDs based on the tokens the user has targeted
 				let targetIds = [];
 				for await(i of targets){
 					targetIds.push(i.document._id)
 				};
 
 				await game.macros.getName("Make Save").execute({
-					tokenIds:targetIds,
-					originatorId:token.document._id,
-					saveConfig:saveConfig,
-					passConfig: passConfig,
-					failConfig: failConfig,
-					passEffect: [[],dmgConfigPass], // If dmgConfigs aren't required in the macro you're making, remove them from these lines
-					failEffect: [[],dmgConfigFail]
+					tokenIds:targetIds, 
+					originatorId:token.document._id, 
+					saveConfig:saveConfig, 
+					passCard: passCard, 
+					failCard: failCard, 
+					passDamage: passDamage, // If dmgConfigs aren't required in the macro you're making, remove them from these lines
+					failDamage: failDamage,
+					passStatuses: [], // Populate these with the lids of statuses you want applied on pass/fail respectively
+					failStatuses: [],
 				});
 			}
 		}

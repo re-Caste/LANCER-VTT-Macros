@@ -15,17 +15,23 @@ if (typeof token.document.getFlag("world", "saveEffectCheck") !== "undefined") {
 await token.document.setFlag("world", "saveEffectCheck", true) // Only allow the Dialog to be open once
 
 // Define pass configs
-const passStatuses = scope.passConfig[0];
-var passDmgConfig = scope.passConfig[1];
-if (passDmgConfig === undefined) {
-	var passDmgConfig = false;
+var passDamage = scope.passDamage;
+if (typeof passDamage === undefined) {
+	passDamage = false;
+};
+var passStatuses = scope.passStatuses;
+if (typeof passStatuses === "undefined") {
+    passStatuses = []
 };
 
 // Define fail configs
-const failStatuses = scope.failConfig[0];
-var failDmgConfig = scope.failConfig[1];
-if (failDmgConfig === undefined) {
-	var failDmgConfig = false;
+var failDamage = scope.failDamage;
+if (typeof failDamage === undefined) {
+	failDamage = false;
+};
+var failStatuses = scope.failStatuses;
+if (typeof failStatuses === "undefined") {
+    failStatuses = []
 };
 
 // Create list of users with "OWNER" permissions to this token
@@ -53,7 +59,14 @@ if (!permList.includes(game.user)) {
 // Wait for all saves to be complete
 await Dialog.wait({
 	title:"Confirm saves",
-    content:"Wait for all saves to be made before continuing.", // This needs changing to something more professional looking using html or avoiding a Dialog altogether
+    content:`
+        <form>
+            <div class="form-group">
+                Wait for all saves to be made before continuing.
+            </div>
+            <hr>
+        </form>
+    `,
     buttons:{
         ok:{
             label:"OK",
@@ -76,8 +89,8 @@ await Dialog.wait({
                 // TO DO - Figure how to combine these into a singular damage roll
                 if (passIds.length > 0) {
                     await game.user.updateTokenTargets(passIds);
-                    if (passDmgConfig !== false) {
-                        const passFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, passDmgConfig);
+                    if (passDamage !== false) {
+                        const passFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, passDamage);
                         await passFlow.begin();
                     };
                     if (passStatuses.length > 0) {
@@ -89,8 +102,8 @@ await Dialog.wait({
 
                 if (failIds.length > 0) {
                     await game.user.updateTokenTargets(failIds);
-                    if (failDmgConfig !== false) {
-                        const failFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDmgConfig);
+                    if (failDamage !== false) {
+                        const failFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDamage);
                         await failFlow.begin();
                     };
                     if (failStatuses.length > 0) {
