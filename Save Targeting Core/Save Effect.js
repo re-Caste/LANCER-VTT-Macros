@@ -1,42 +1,41 @@
 // Generic macro to allow for save targeting effects
 // Run as "Everyone" using Advanced Macros
 
-// Passed arguments: 
-// tokenIds - Array of target IDs, 
-// originatorId - Token Id, 
-// saveConfig - parameters, 
-// passConfig - parameters, 
-// failConfig - parameters, 
-// passEffect - parameters, 
-// failEffect - parameters
+// Passed arguments:
+// originatorId - Token Id,
+// targetIds - Array of token Ids 
+// passConfig - Array in form [[status lids], dmgParams],
+// failConfig - Array in form [[status lids], dmgParams], 
 
-const token = canvas.tokens.get(scope.tokenId);
-const passes = [];
-const fails = [];
-scope.passIds.forEach(async(target) => {
-	passes.push(canvas.tokens.get(target)) 
-});
-scope.failIds.forEach(async(target) => {
-	fails.push(canvas.tokens.get(target)) 
-});
 const applyStatus = game.macros.getName("Apply Statuses")
+const token = canvas.tokens.get(scope.tokenId);
+if (typeof token.document.getFlag("world", "saveEffectCheck") !== "undefined") {
+	return;
+};
+await token.document.setFlag("world", "saveEffectCheck", true) // Only allow the Dialog to be open once
 
-// Pass configs
-const passStatuses = scope.passConfig[0];
-var passDmgConfig = scope.passConfig[1];
-if (passDmgConfig === undefined) {
-	var passDmgConfig = false;
+// Define pass configs
+var passDamage = scope.passDamage;
+if (typeof passDamage === undefined) {
+	passDamage = false;
+};
+var passStatuses = scope.passStatuses;
+if (typeof passStatuses === "undefined") {
+    passStatuses = []
 };
 
-// Fail configs
-const failStatuses = scope.failConfig[0];
-var failDmgConfig = scope.failConfig[1];
-if (failDmgConfig === undefined) {
-	var failDmgConfig = false;
+// Define fail configs
+var failDamage = scope.failDamage;
+if (typeof failDamage === undefined) {
+	failDamage = false;
+};
+var failStatuses = scope.failStatuses;
+if (typeof failStatuses === "undefined") {
+    failStatuses = []
 };
 
-permList = []
 // Create list of users with "OWNER" permissions to this token
+permList = []
 for (i in game.users.contents) {
 	if (token.actor.testUserPermission(game.users.contents[i], "OWNER")) {
 		permList.push(game.users.contents[i])
@@ -57,35 +56,75 @@ if (!permList.includes(game.user)) {
 	return;
 };
 
-async function pass(target) {
-	if (passDmgConfig !== false) {
-		canvas.tokens.controlled[0] = canvas.tokens.get(tokenId)
-		await target.setTarget(true, {user: game.user, releaseOthers: true});
-		const damageFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, passDmgConfig);
-		await damageFlow.begin();
-	};
+// Wait for all saves to be complete
+await Dialog.wait({
+	title:"Confirm saves",
+    content:`
+        <form>
+            <div class="form-group">
+                Wait for all saves to be made before continuing.
+            </div>
+            <hr>
+        </form>
+    `,
+    buttons:{
+        ok:{
+            label:"OK",
+            callback:async()=>{
+                let passIds = [];
+                let failIds = []
+                for await(i of scope.targetIds) { // Populate Id Arrays and unset flags from appropriate tokens
+                    let j = canvas.tokens.get(i)
+                    if (typeof j.document.getFlag("world", "pass") !== "undefined" && j.document.getFlag("world", "pass") === true) {
+                        passIds.push(i);
+                        j.document.unsetFlag("world", "pass");
+                    };
+                    if (typeof j.document.getFlag("world", "fail") !== "undefined" && j.document.getFlag("world", "fail") === true) {
+                        failIds.push(i);
+                        j.document.unsetFlag("world", "fail");
+                    }
+                };
+                await canvas.tokens.selectObjects(token) // Ensure original token is selected
 
-	if (passStatuses.length > 0) {
-		await applyStatus.execute({targetId:target.document._id, statuses:passStatuses})
-	};
-};
+                // TO DO - Figure how to combine these into a singular damage roll
+                if (passIds.length > 0) {
+                    await game.user.updateTokenTargets(passIds);
+                    if (passDamage !== false) {
+                        const passFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, passDamage);
+                        await passFlow.begin();
+                    };
+                    if (passStatuses.length > 0) {
+                        for await(i of passIds) {
+                            applyStatus.execute({targetId:i, statuses:passStatuses})
+                        }
+                    };
+                };
 
-async function fail(target) {
-	if (failDmgConfig !== false) {
-		canvas.tokens.controlled[0] = canvas.tokens.get(tokenId)
-		await target.setTarget(true, {user: game.user, releaseOthers: true});
-		const damageFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDmgConfig);
-		await damageFlow.begin();
-	};
-
-	if (failStatuses.length > 0) {
-		await applyStatus.execute({targetId:target.document._id, statuses:failStatuses})
-	};
-};
-
-for await (i of passes) {
-	await pass(i)
-};
-for await (i of fails){
-	await fail(i)
-};
+                if (failIds.length > 0) {
+                    await game.user.updateTokenTargets(failIds);
+                    if (failDamage !== false) {
+                        const failFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDamage);
+                        await failFlow.begin();
+                    };
+                    if (failStatuses.length > 0) {
+                        for await(i of passIds) {
+                            applyStatus.execute({targetId:i, statuses:failStatuses})
+                        }
+                    };
+                }
+            }
+        },
+        cancel:{
+            label:"Cancel",
+            callback:async()=>{
+                return ui.notifications.warn("Save Effect cancelled.", {})
+            }
+        }
+    },
+    close:async()=>{
+        // Clear Dialog-stopping flag when Dialog is closed
+        await token.document.unsetFlag("world", "saveEffectCheck");
+    }
+}, {top:100});
+// Clear token targets after Dialog is finished
+await game.user.updateTokenTargets();
