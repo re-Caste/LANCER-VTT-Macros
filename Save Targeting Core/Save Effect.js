@@ -75,7 +75,7 @@ await Dialog.wait({
             label:"OK",
             callback:async()=>{
                 let passIds = [];
-                let failIds = []
+                let failIds = [];
                 for await(i of scope.targetIds) { // Populate Id Arrays and unset flags from appropriate tokens
                     let j = canvas.tokens.get(i)
                     if (typeof j.document.getFlag("world", "pass") !== "undefined" && j.document.getFlag("world", "pass") === true) {
@@ -110,7 +110,7 @@ await Dialog.wait({
                         await failFlow.begin();
                     };
                     if (failStatuses.length > 0) {
-                        for await(i of passIds) {
+                        for await(i of failIds) {
                             applyStatus.execute({targetId:i, statuses:failStatuses})
                         }
                     };
