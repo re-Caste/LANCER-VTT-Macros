@@ -30,7 +30,7 @@ if (typeof passStatuses === "undefined") {
 };
 var passApply = scope.passApply;
 if (typeof passApply === "undefined") {
-    passApply = false;
+    passApply = true;
 };
 
 // Define fail configs

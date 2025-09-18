@@ -16,14 +16,16 @@ function tokenDistance(t1, t2) {
 
 // Call AoE for targeting
 let wanted = "Line 10".split(); // Change for whatever AoE is required
-game.lancer.canvas.WeaponRangeTemplate.fromRange({ // Calls AoE template and sets targets from it, as in the built-in targeting macros
-	type: wanted[0],
-	val: wanted[1],
-}).placeTemplate()
-	.then(t => {
-		if (t) game.lancer.targetsFromTemplate(t.id);
-	}
-);
+if (wanted[0] !== "Burst") {
+	game.lancer.canvas.WeaponRangeTemplate.fromRange({ // Calls AoE template and sets targets from it, as in the built-in targeting macros
+		type: wanted[0],
+		val: wanted[1],
+	}).placeTemplate()
+		.then(t => {
+			if (t) game.lancer.targetsFromTemplate(t.id);
+		}
+	);
+}
 
 const saveConfig = {
 	title: "Save :: HULL", // Match "HULL" to whichever HASE you're using
@@ -116,7 +118,7 @@ await Dialog.wait({
 		}
 	},
 	close:async()=>{
-		if (targeting !== "Single Target") {
+		if (targeting !== "Burst") {
 			// Clean up template from canvas
 			canvas.templates.placeables.reverse()[0].document.delete()
 		};
