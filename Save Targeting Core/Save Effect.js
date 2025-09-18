@@ -3,12 +3,14 @@
 // Run as "Everyone" using Advanced Macros
 
 // Passed arguments:
-// originatorId - Token Id,
+// originatorId - Token Id
 // targetIds - Array of token Ids 
-// passDamage - damageFlowParams, 
-// failDamage - damageFlowParams,
-// passStatuses - Array of statcond lids
-// failStatuses - Array of statcond lids
+// passDamage - damageFlowParams
+// passStatuses - Array statcond lids
+// passApply - Boolean: set to false to remove passed statcond
+// failDamage - damageFlowParams
+// failStatuses - Array statcond lids
+// failApply - Boolean: set to false to remove passed statcond
 
 const applyStatus = game.macros.getName("Apply Statuses")
 const token = canvas.tokens.get(scope.tokenId);
@@ -24,7 +26,11 @@ if (typeof passDamage === "undefined") {
 };
 var passStatuses = scope.passStatuses;
 if (typeof passStatuses === "undefined") {
-    passStatuses = []
+    passStatuses = [];
+};
+var passApply = scope.passApply;
+if (typeof passApply === "undefined") {
+    passApply = false;
 };
 
 // Define fail configs
@@ -34,8 +40,13 @@ if (typeof failDamage === "undefined") {
 };
 var failStatuses = scope.failStatuses;
 if (typeof failStatuses === "undefined") {
-    failStatuses = []
+    failStatuses = [];
 };
+var failApply = scope.failApply;
+if (typeof failApply === "undefined") {
+    failApply = true;
+};
+
 
 // Create list of users with "OWNER" permissions to this token
 permList = []
@@ -98,7 +109,7 @@ await Dialog.wait({
                     };
                     if (passStatuses.length > 0) {
                         for await(i of passIds) {
-                            applyStatus.execute({targetId:i, statuses:passStatuses})
+                            applyStatus.execute({targetId:i, statuses:passStatuses, active:passApply})
                         }
                     };
                 };
@@ -111,7 +122,7 @@ await Dialog.wait({
                     };
                     if (failStatuses.length > 0) {
                         for await(i of failIds) {
-                            applyStatus.execute({targetId:i, statuses:failStatuses})
+                            applyStatus.execute({targetId:i, statuses:failStatuses, active:failApply})
                         }
                     };
                 }

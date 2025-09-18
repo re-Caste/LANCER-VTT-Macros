@@ -2,16 +2,18 @@
 // Ensure macro is named "Make Save"
 // Run as "Everyone" using Advanced Macros
 
-// Passed arguments: 
-// tokenIds - Array of target IDs, 
-// originatorId - Token Id, 
-// saveConfig - statFlowParams, 
-// passCard - simpleTextParams, 
-// failCard - simpleTextParams, 
-// passDamage - damageFlowParams, 
-// failDamage - damageFlowParams,
-// passStatuses - Array of statcond lids
-// failStatuses - Array of statcond lids
+// Passed arguments:
+// tokenIds - Array of target IDs
+// originatorId - Token Id
+// saveConfig - statFlowParams
+// passCard - simpleTextParams
+// passDamage - damageFlowParams
+// passStatuses - Array statcond lids
+// passApply - Boolean: set to false to remove passed statcond
+// failCard - simpleTextParams
+// failDamage - damageFlowParams
+// failStatuses - Array statcond lids
+// failApply - Boolean: set to false to remove passed statcond
 
 const originator = canvas.tokens.get(scope.originatorId)
 
@@ -37,8 +39,10 @@ if (typeof failCard === "undefined") {
 
 const passDamage = scope.passDamage;
 const passStatuses = scope.passStatuses;
+const passApply = scope.passApply;
 const failDamage = scope.failDamage;
 const failStatuses = scope.failStatuses;
+const failApply = scope.failApply;
 
 let passes = [];
 let fails = [];
@@ -97,7 +101,9 @@ await game.macros.getName("Save Effect").execute({
 
 	passDamage:passDamage, 
 	passStatuses:passStatuses,
+	passApply:passApply,
 
 	failDamage:failDamage,
 	failStatuses:failStatuses,
+	failApply:failApply,
 });
