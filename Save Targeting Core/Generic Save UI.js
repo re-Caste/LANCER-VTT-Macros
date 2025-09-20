@@ -4,7 +4,6 @@ if (canvas.tokens.controlled.length !== 1) {
 };
 
 const token = canvas.tokens.controlled[0];
-const save = token.actor.system.save
 
 // Define arrays that we can map to lists as needed
 let aoeTypes = ["Blast", "Burst", "Cone", "Line"]

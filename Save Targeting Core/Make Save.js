@@ -15,7 +15,8 @@
 // failStatuses - Array statcond lids
 // failApply - Boolean: set to false to remove passed statcond
 
-const originator = canvas.tokens.get(scope.originatorId)
+const originator = canvas.tokens.get(scope.originatorId);
+const save = originator.actor.system.save;
 
 // Data handling code, ensures that a specific flag is always at its required starting value
 if (typeof originator.document.getFlag("world", "saveEffectCheck") !== "undefined") {
@@ -47,7 +48,6 @@ const failApply = scope.failApply;
 let passes = [];
 let fails = [];
 for await(token of tokens) {
-	const save = token.actor.system.save;
 	let permList = []
 	// Create list of users with "OWNER" permissions to this token
 	for await (j of game.users.contents) {
@@ -72,7 +72,6 @@ for await(token of tokens) {
 
 	//Initialise flow
 	try {
-		await canvas.tokens.selectObjects(originator) // Ensure original token is selected
 		const rollFlow = new(game.lancer.flows.get("StatRollFlow"))(token.actor, saveConfig); // Force save flow
 		await rollFlow.begin();
 		const rolled = game.messages?.contents[game.messages?.contents.length - 1].rolls[0]._total; // Get roll from save flow
