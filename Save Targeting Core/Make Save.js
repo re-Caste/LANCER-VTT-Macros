@@ -19,13 +19,8 @@ const originator = canvas.tokens.get(scope.originatorId);
 const save = originator.actor.system.save;
 
 // Data handling code, ensures that a specific flag is always at its required starting value
-if (typeof originator.document.getFlag("world", "saveEffectCheck") !== "undefined") {
-    originator.document.unsetFlag("world", "saveEffectCheck");
-};
-
-const tokens = []
-for await (i of scope.tokenIds) {
-	tokens.push(canvas.tokens.get(i))
+if (typeof originator.document.getFlag("world", "saveEffectCheck") !== "undefined" && originator.actor.testUserPermission(game.user, "OWNER")) {
+	originator.document.unsetFlag("world", "saveEffectCheck");
 };
 
 const saveConfig = scope.saveConfig;
@@ -47,7 +42,8 @@ const failApply = scope.failApply;
 
 let passes = [];
 let fails = [];
-for await(token of tokens) {
+for await(i of scope.tokenIds) {
+	let token = canvas.tokens.get(i)
 	let permList = []
 	// Create list of users with "OWNER" permissions to this token
 	for await (j of game.users.contents) {

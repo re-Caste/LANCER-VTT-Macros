@@ -14,6 +14,29 @@
 
 const applyStatus = game.macros.getName("Apply Statuses")
 const token = canvas.tokens.get(scope.tokenId);
+
+// Create list of users with "OWNER" permissions to this token
+permList = []
+for (i in game.users.contents) {
+	if (token.actor.testUserPermission(game.users.contents[i], "OWNER")) {
+		permList.push(game.users.contents[i])
+	}
+};
+
+// If a player other than the GM has "OWNER" perms, let this resolve on their end
+if (permList.length > 1) {
+	for (i in permList) {
+		if (permList[i].isGM) {
+			permList.splice(i, 1);
+		};
+	};
+};
+
+// Stop if player not permitted
+if (!permList.includes(game.user)) {
+	return;
+};
+
 if (typeof token.document.getFlag("world", "saveEffectCheck") !== "undefined") {
 	return;
 };
@@ -45,29 +68,6 @@ if (typeof failStatuses === "undefined") {
 var failApply = scope.failApply;
 if (typeof failApply === "undefined") {
     failApply = true;
-};
-
-
-// Create list of users with "OWNER" permissions to this token
-permList = []
-for (i in game.users.contents) {
-	if (token.actor.testUserPermission(game.users.contents[i], "OWNER")) {
-		permList.push(game.users.contents[i])
-	}
-};
-
-// If a player other than the GM has "OWNER" perms, let this resolve on their end
-if (permList.length > 1) {
-	for (i in permList) {
-		if (permList[i].isGM) {
-			permList.splice(i, 1);
-		};
-	};
-};
-
-// Stop if player not permitted
-if (!permList.includes(game.user)) {
-	return;
 };
 
 // Wait for all saves to be complete
