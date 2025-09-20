@@ -70,6 +70,10 @@ for await(token of tokens) {
 		continue;
 	};
 
+	// Data handling, ensure that previous lingering flags are removed
+	await token.document.unsetFlag("world", "pass");
+	await token.document.unsetFlag("world", "fail");
+
 	//Initialise flow
 	try {
 		const rollFlow = new(game.lancer.flows.get("StatRollFlow"))(token.actor, saveConfig); // Force save flow

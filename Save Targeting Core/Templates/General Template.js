@@ -113,6 +113,8 @@ await Dialog.wait({
 					failDamage: failDamage,
 					passStatuses: [], // Populate these with the lids of statuses you want applied on pass/fail respectively
 					failStatuses: [],
+					passApply: true, // These default to true if not passed, and determine whether a save applies or removes the above passed statuses
+					failAppy: true,
 				});
 			}
 		},
