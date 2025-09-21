@@ -42,7 +42,17 @@ await Dialog.wait({
                     ${saveTypes.map(b=>`<option value="${b}">${b}</option>`)})
                 </select>
             </div>
-
+            <div class="form-group">
+                &nbsp; For:&nbsp;
+                <input class="custom-control-input inp"type="checkbox" id=allies name="checkbox" value=1 checked style="vertical-align:middle; position:relative; z-index:1">
+                <label class="custom-control-label" for=allies style="position:relative; z-index:1">Friendly</label>
+                <input class="custom-control-input inp"type="checkbox" id=neutral name="checkbox" value=0 checked style="vertical-align:middle; position:relative; z-index:1">
+                <label class="custom-control-label" for=neutral style="position:relative; z-index:1">Neutral</label>
+                <input class="custom-control-input inp"type="checkbox" id=hostiles name="checkbox" value=-1 checked style="vertical-align:middle; position:relative; z-index:1">
+                <label class="custom-control-label" for=hostiles style="position:relative; z-index:1">Hostiles</label>
+                <input class="custom-control-input inp"type="checkbox" id=secret name="checkbox" value=-2 checked style="vertical-align:middle; position:relative; z-index:1">
+                <label class="custom-control-label" for=secret style="position:relative; z-index:1">Secret</label>
+            </div>
             <hr>
             <div style="text-align:center">
                 <h3>
@@ -127,6 +137,7 @@ await Dialog.wait({
                 let targeting = html.find('[name=targeting]')[0].value;
                 let aoeLength = html.find('[name=aoeLength]')[0].value;
                 let saveType = html.find('[name=saveType]')[0].value;
+                let dispos = [...html[0].querySelectorAll('.inp:checked')].map(e=>Number(e.value));
 
                 let failDamageType = html.find('[name=failDamageType]')[0].value;
                 let failDamageVal = html.find('[name=failDamageVal]')[0].value;
@@ -154,6 +165,18 @@ await Dialog.wait({
                             }
                         );
                     }
+                };
+                
+                switch (dispos) {
+                    case 0:
+                        var affectContent = "Targeting all characters";
+                        break;
+                    case 1:
+                        var affectContent = "Targeting "+token.document.name+"'s allies";
+                        break;
+                    case -1:
+                        var affectContent = "Targeting characters hostile to "+token.document.name;
+                        break;
                 };
                 
                 // Populate configs from collected values
@@ -206,13 +229,13 @@ await Dialog.wait({
 
                 switch (targeting) {
                     case "Single Target":
-                        var content = "Target desired token";
+                        var targContent = "Target desired token";
                         break;
                     case "Burst":
-                        var content = "Target token for centre of burst"
+                        var targContent = "Target token for centre of burst"
                         break;
                     default:
-                        var content = "Place AoE template"
+                        var targContent = "Place AoE template"
                         break;
                 }
 
@@ -221,7 +244,7 @@ await Dialog.wait({
                     content:`
                             <form>
                                 <div style="text-align:center"">
-                                    // ${content} //<br>// Ensure selected targets are correct //<br>// Esc to cancel //
+                                    // ${targContent} //<br>// ${affectContent} //<br>// Esc to cancel //
                                 </div>
                                 <hr>
                             </form>
@@ -241,7 +264,12 @@ await Dialog.wait({
                                     game.user.updateTokenTargets(targets) // Set targets to all needed for burst
                                 };
 
-                                const targetIds = Array.from(game.user.targets.ids);
+                                let targetIds = Array.from(game.user.targets.ids);
+                                if (dispos!==0) { // Dispos takes values -1,0,1, which each determining how to check against the originating's token disposition
+                                    let origDisp = token.document.disposition
+                                    if (origDisp===-2) origDisp=-1; // Assume secret disposition tokens are hostile
+                                    targetIds = targetIds.filter(i=>dispos.includes(canvas.tokens.get(i).document.disposition))
+                                };
 
                                 await game.macros.getName("Make Save").execute({
                                     tokenIds: targetIds,
