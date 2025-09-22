@@ -74,7 +74,7 @@ for await(i of scope.tokenIds) {
 	try {
 		const rollFlow = new(game.lancer.flows.get("StatRollFlow"))(token.actor, saveConfig); // Force save flow
 		await rollFlow.begin();
-		const rolled = game.messages?.contents[game.messages?.contents.length - 1].rolls[0]._total; // Get roll from save flow
+		const rolled = game.messages?.contents.reverse()[0].rolls[0]._total; // Get roll from save flow
 		if (rolled < save) {
 			if (failCard !== false) {
 				const failFlow = new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, failCard); // Run the effect card
