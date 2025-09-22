@@ -91,11 +91,11 @@ await Dialog.wait({
 				if (rolled >= target.actor.system.edef) {
 					const wait = async (ms) => new Promise((resolve)=> setTimeout(resolve, ms));
 					await wait(2400);
-					let noMacroChat = {
+					let chat = {
 						title:invade,
 						description:dscList[invadeList.indexOf(invade)]
 					};
-					await new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, noMacroChat).begin();
+					await new(game.lancer.flows.get("SimpleTextFlow"))(token.actor, chat).begin();
 					if (typeof game.macros.getName(invade) !== "undefined") {
 						await game.macros.getName(invade).execute()
 					}
