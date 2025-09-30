@@ -18,7 +18,7 @@
 const originator = canvas.tokens.get(scope.originatorId);
 const save = originator.actor.system.save;
 
-// Data handling code, ensures that a specific flag is always at its required starting value
+// Data handling code, ensures that a specific flag is always at its required starting null value
 if (typeof originator.document.getFlag("world", "saveEffectCheck") !== "undefined" && originator.actor.testUserPermission(game.user, "OWNER")) {
 	originator.document.unsetFlag("world", "saveEffectCheck");
 };
@@ -95,7 +95,7 @@ for await(i of scope.tokenIds) {
 
 //Apply effects
 await game.macros.getName("Save Effect").execute({
-	tokenId:originatorId,
+	tokenId:scope.originatorId,
     targetIds:scope.tokenIds, 
 
 	passDamage:passDamage, 

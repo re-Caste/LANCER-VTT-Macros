@@ -96,11 +96,34 @@ await Dialog.wait({
                     if (typeof j.document.getFlag("world", "fail") !== "undefined" && j.document.getFlag("world", "fail") === true) {
                         failIds.push(i);
                         j.document.unsetFlag("world", "fail");
-                    }
+                    };
                 };
                 await canvas.tokens.selectObjects(token) // Ensure original token is selected
 
                 // TO DO - Figure how to combine these into a singular damage roll
+                if (failIds.length > 0) {
+                    await game.user.updateTokenTargets(failIds);
+                    if (failDamage !== false) {
+                        const failFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDamage);
+                        await failFlow.begin();
+                        if (passDamage !== false) {
+                            let tempDamage = [];
+                            for (i in game.messages?.contents.reverse()[0].rolls) {
+                                let type = passDamage.damage[i].type;
+                                let total = game.messages?.contents.reverse()[0].rolls[i]._total;
+                                tempDamage.push({type:type, val:total.toString()})
+                            };
+                            console.log(tempDamage);
+                            Object.assign(passDamage, {damage:tempDamage});
+                        }
+                    };
+                    if (failStatuses.length > 0) {
+                        for await(i of failIds) {
+                            applyStatus.execute({targetId:i, statuses:failStatuses, active:failApply})
+                        };
+                    };
+                };
+
                 if (passIds.length > 0) {
                     await game.user.updateTokenTargets(passIds);
                     if (passDamage !== false) {
@@ -110,22 +133,9 @@ await Dialog.wait({
                     if (passStatuses.length > 0) {
                         for await(i of passIds) {
                             applyStatus.execute({targetId:i, statuses:passStatuses, active:passApply})
-                        }
+                        };
                     };
                 };
-
-                if (failIds.length > 0) {
-                    await game.user.updateTokenTargets(failIds);
-                    if (failDamage !== false) {
-                        const failFlow = new(game.lancer.flows.get("DamageRollFlow"))(token.actor, failDamage);
-                        await failFlow.begin();
-                    };
-                    if (failStatuses.length > 0) {
-                        for await(i of failIds) {
-                            applyStatus.execute({targetId:i, statuses:failStatuses, active:failApply})
-                        }
-                    };
-                }
             }
         },
         cancel:{

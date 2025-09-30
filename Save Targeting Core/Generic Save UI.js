@@ -266,7 +266,7 @@ await Dialog.wait({
 
                                 let targetIds = Array.from(game.user.targets.ids);
                                 if (dispos!==0) { // Dispos takes values -1,0,1, which each determining how to check against the originating's token disposition
-                                    let origDisp = token.document.disposition
+                                    let origDisp = token.document.disposition;
                                     if (origDisp===-2) origDisp=-1; // Assume secret disposition tokens are hostile
                                     targetIds = targetIds.filter(i=>dispos.includes(canvas.tokens.get(i).document.disposition))
                                 };
@@ -290,7 +290,7 @@ await Dialog.wait({
                     close:async()=>{
                         if (!["Single Target", "Burst"].includes(targeting)) {
                             // Clean up template from canvas, if one exists
-                            canvas.templates.placeables.reverse()[0].document.delete()
+                            canvas.templates.placeables.reverse()[0].document.delete();
                         };
                     }
                 }, {top:100});
