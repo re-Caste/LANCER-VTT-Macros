@@ -3,8 +3,8 @@ var pilot = "";
 if (canvas.tokens.controlled.length === 1) {
     if (canvas.tokens.controlled[0].actor.type==="pilot") {
 	    pilot = canvas.tokens.controlled[0].actor;
-    } else if (canvas.tokens.controlled.actor.type==="mech") {
-        pilot = canvas.tokens.controlled[0].actor.system.pilot.value.actor;
+    } else if (canvas.tokens.controlled[0].actor.type==="mech") {
+        pilot = canvas.tokens.controlled[0].actor.system.pilot.value;
     } else {
         return ui.notifications.warn("No pilot related to selected token found, please select from available pilots", {})
     };
@@ -96,8 +96,9 @@ await Dialog.wait({
             label:"Confirm",
             callback:async(html)=>{
                 let skill = allSkills.find(i=>i.name===html.find('[name=select]')[0].value);
+                console.log(skill)
                 for await(i of pilotSkills) {
-                    if (i.system.lid === skill.system.lid) {
+                    if (i.name === skill.name) {
                         console.log("Pilot owns this skill");
                         let flow = new(game.lancer.flows.get("StatRollFlow"))(i);
                         await flow.begin();
