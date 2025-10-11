@@ -106,10 +106,8 @@ await Dialog.wait({
                     }
                 }
                 console.log("Pilot has no bonus in this skill")
-                let skillId = skill.system.lid
                 let skillConfig = {
                     title: skill.name,
-                    path: skillId
                 }
                 let flow = new(game.lancer.flows.get("StatRollFlow"))(pilot, skillConfig);
                 await flow.begin()
